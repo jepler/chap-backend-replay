@@ -2,4 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
+build
+setuptools>=45
+twine
+wheel
 chap
