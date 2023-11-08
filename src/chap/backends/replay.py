@@ -4,13 +4,17 @@
 
 import asyncio
 import functools
-import random
 import os
+import random
 from dataclasses import dataclass
 
 import click
 
-from ..session import Assistant, User, Session
+from ..session import (  # pylint: disable=relative-beyond-top-level
+    Assistant,
+    Session,
+    User,
+)
 
 
 def ipartition(s, sep=" "):
@@ -34,23 +38,30 @@ class Replay:
         self.parameters = self.Parameters()
 
     @property
-    @functools.cache
+    @functools.lru_cache()
     def _session(self):
         if self.parameters.session is None:
-            raise click.BadParameter("Must specify -B session:/full/path/to/existing_session.json")
+            raise click.BadParameter(
+                "Must specify -B session:/full/path/to/existing_session.json"
+            )
         session_file = os.path.expanduser(self.parameters.session)
         with open(session_file, "r", encoding="utf-8") as f:
             return Session.from_json(f.read())
 
     @property
-    @functools.cache
+    @functools.lru_cache()
     def _assistant_responses(self):
-        return [message for message in self._session.session if message.role == 'assistant']
+        return [
+            message for message in self._session.session if message.role == "assistant"
+        ]
 
     @property
     def system_message(self):
         num_assistant_responses = len(self._assistant_responses)
-        return f"Replay of {self.parameters.session} with {num_assistant_responses} responses. The original session system message was:\n\n{self._session.session[0].content}"
+        return (
+            f"Replay of {self.parameters.session} with {num_assistant_responses} responses. "
+            f"The original session system message was:\n\n{self._session.session[0].content}"
+        )
 
     async def aask(self, session, query):
         data = self.ask(session, query)
@@ -64,8 +75,10 @@ class Replay:
         self, session, query, *, max_query_size=5, timeout=60
     ):  # pylint: disable=unused-argument
         if self._assistant_responses:
-            idx = sum(1 for message in session.session if message.role == 'assistant') % len(self._assistant_responses)
-            
+            idx = sum(
+                1 for message in session.session if message.role == "assistant"
+            ) % len(self._assistant_responses)
+
             new_content = self._assistant_responses[idx].content
         else:
             new_content = "(No assistant responses in session)"
